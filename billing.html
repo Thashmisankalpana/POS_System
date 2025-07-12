@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing Page</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        .section {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .categories, .items, .bill {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            height: 90%;
+        }
+
+        /* Category Buttons */
+        .category-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: none;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            text-align: center;
+            border-radius: 5px;
+        }
+
+        .category-btn:hover {
+            background: #0056b3;
+        }
+
+        .items-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            overflow-y: auto; 
+            max-height: 500px;
+            padding: 10px;
+        }
+
+        .item-card {
+            width: 150px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        .item-card img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid #ddd;
+        }
+
+        .item-card p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .bill table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .bill th, .bill td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        .total {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .checkout-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: rgb(33, 4, 218);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        .checkout-btn:hover {
+            background: rgb(33, 4, 218);
+        }
+        .delete-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background: #cc0000;
+        }
+
+        .clear-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        .clear-btn:hover {
+            background: #cc0000;
+        }
+        .insert-stock-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: #218838;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        .insert-stock-btn:hover {
+            background: #218851;
+        }
+
+
+
+    </style>
+</head>
+<body>
+    
+    
+<!-- Section 1: Categories -->
+<div class="section">
+    <div class="categories">
+        <h3>Categories</h3>
+        <div id="categoryList"></div>
+    </div>
+    <div class="insert-stock-container">
+        <button id="insertStockBtn" class="insert-stock-btn">Insert Stock</button>
+    </div>
+</div>
+
+<!-- Section 2: Items -->
+<div class="section">
+    <div class="items">
+        <h3>Items</h3>
+        <div class="items-container" id="itemsList"></div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="bill">
+        <h3>Bill</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Price</th>
+                    <th>Qty</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody id="billList"></tbody>
+        </table>
+        <p class="total">Total: $<span id="billTotal">0.00</span></p>
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+        <button id="clearBillBtn" class="clear-btn">Clear Bill</button>
+        <button id="checkoutBtn" class="checkout-btn">Checkout</button>
+    </div>
+</div>
+
+
+<script>
+    $(document).ready(function () {
+        loadCategories();
+        loadItems(); // Load all items on page load
+
+        function loadCategories() {
+            $.ajax({
+                url: "get_categories.php",
+                method: "GET",
+                success: function (data) {
+                    $("#categoryList").html(data);
+                }
+            });
+        }
+
+        function loadItems(category = "") {
+            $.ajax({
+                url: "get_items.php",
+                method: "GET",
+                data: { category: category },
+                success: function (data) {
+                    $("#itemsList").html(data);
+                }
+            });
+        }
+
+        $(document).on("click", ".category-btn", function () {
+            let category = $(this).text();
+            loadItems(category);
+        });
+
+        let billItems = {};
+
+        // Add item to bill
+        $(document).on("click", ".item-card", function () {
+            let name = $(this).data("name");
+            let price = parseFloat($(this).data("price"));
+
+            if (!billItems[name]) {
+                billItems[name] = { price: price, qty: 1 };
+            } else {
+                billItems[name].qty++;
+            }
+
+            updateBill();
+        });
+
+        // Delete single item from the bill
+        $(document).on("click", ".delete-btn", function () {
+            let itemName = $(this).data("name");
+
+            if (billItems[itemName].qty > 1) {
+                billItems[itemName].qty--; // Reduce quantity of the item
+            } else {
+                delete billItems[itemName]; // Remove item completely if qty is 1
+            }
+
+            updateBill(); // Refresh the bill after item removal
+        });
+
+        // Update bill UI
+        function updateBill() {
+            let total = 0;
+            let billHtml = "";
+
+            for (let item in billItems) {
+                let qty = billItems[item].qty;
+                let price = billItems[item].price;
+                let totalItem = price * qty;
+                total += totalItem;
+
+                billHtml += `<tr>
+                                <td>${item}</td>
+                                <td>$${price.toFixed(2)}</td>
+                                <td>${qty}</td>
+                                <td>$${totalItem.toFixed(2)}</td>
+                                <td><button class="delete-btn" data-name="${item}">Delete</button></td>
+                            </tr>`;
+            }
+
+            $("#billList").html(billHtml);
+            $("#billTotal").text(total.toFixed(2));
+        }
+
+        // Clear Bill button logic
+        $(document).on("click", "#clearBillBtn", function () {
+            billItems = {}; // Clear all bill items
+            updateBill(); // Refresh bill UI
+        });
+
+        // Checkout button logic
+        $(document).on("click", "#checkoutBtn", function () {
+            if ($.isEmptyObject(billItems)) {
+                alert("No items in the bill!");
+                return;
+            }
+
+            printReceipt(); // Print the bill first
+
+            setTimeout(() => {
+                billItems = {}; // Clear the bill items AFTER printing
+                updateBill(); // Refresh the bill UI
+            }, 500); // Small delay to allow printing before clearing
+        });
+
+        // Print receipt function
+        function printReceipt() {
+            let receiptContent = "<h2>Receipt</h2><table border='1' width='100%' cellspacing='0' cellpadding='5'>";
+            receiptContent += "<tr><th>Name</th><th>Price</th><th>Qty</th><th>Total</th></tr>";
+
+            let totalAmount = 0;
+            for (let item in billItems) {
+                let qty = billItems[item].qty;
+                let price = billItems[item].price;
+                let total = price * qty;
+                totalAmount += total;
+
+                receiptContent += `<tr>
+                                        <td>${item}</td>
+                                        <td>$${price.toFixed(2)}</td>
+                                        <td>${qty}</td>
+                                        <td>$${total.toFixed(2)}</td>
+                                   </tr>`;
+            }
+
+            receiptContent += `<tr><td colspan="3" style="text-align:right; font-weight:bold;">Grand Total:</td>
+                                <td><b>$${totalAmount.toFixed(2)}</b></td></tr>`;
+            receiptContent += "</table>";
+
+            let receiptWindow = window.open("", "_blank");
+            receiptWindow.document.write("<html><head><title>Receipt</title></head><body>");
+            receiptWindow.document.write(receiptContent);
+            receiptWindow.document.write("</body></html>");
+            receiptWindow.document.close();
+            receiptWindow.print();
+        }
+    });
+    $(document).on("click", "#insertStockBtn", function () {
+    window.location.href = "index.html";
+    });
+
+</script>
+
+
+</body>
+</html>
